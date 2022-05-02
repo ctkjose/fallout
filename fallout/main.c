@@ -159,35 +159,13 @@ int main(int argc, const char * argv[]) {
 	//testRegEx();
 }
 void testUTF8(){
-    //ustr s = utf8_CreateString(255);
+    //UString s = utf8_CreateString(255);
     char *cstr = "😀jöse";
     
     unsigned long sz = strlen(cstr);
-    ustr str;
-    str = malloc(sizeof(struct uString));
+    UString str = utf8CreateWithCString(cstr);
     if(!str) return;
     
-    str->text = (char *) malloc(sizeof(char) * sz + 1);
-    str->size = (int)sz;
-    str->length = 0;
-    
-    str->size = strSafeCopy(str->text, sz + 1, cstr);
-    str->length = utflen(str->text);
-    
-    printf("dst[%s] sz=%u length=%u\n", str->text, str->size, str->length);
-    
-    int bytes = 0;
-    char *ch1 = (char *) malloc(sizeof(char) * 5);
-    for(int i = 0; i < str->length; i++){
-        Rune ch = runeAtIndex(str->text, i);
-        memset(ch1,0, 5);
-        bytes = runetochar(ch1, &ch);
-        printf("RUNE[%u]=[%#x]=[U+%-4.4x](%u/b)=[%s]\n", i, ch, ch,bytes, ch1);
-        for(int i = 0; ch1[i] && i < 5; ++i) {
-            printf("%hhx ", ch1[i]);
-        }
-        puts("\n");
-    }
     
     
     

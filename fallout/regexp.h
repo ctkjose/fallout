@@ -63,8 +63,8 @@ struct Resub {
 };
 
 struct Reclass {
-	Rune *end;
-	Rune spans[64];
+    Character *end;
+    Character spans[64];
 };
 
 struct Reprog {

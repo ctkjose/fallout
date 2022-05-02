@@ -23,7 +23,7 @@ struct uString {
 
 struct uString* utf8_CreateString(int sz);
 //void utf8_PushUNI(ustr str, Rune ch)
-void utf8_PushCharCode(ustr str, Rune ch);
+void utf8_PushCharCode(ustr str, Character ch);
 void utf8_Terminate(ustr str);
 int utf8_RuneAtIndex(ustr str, int i);
 char * utf8_CharAtIndex(ustr str, int i);

@@ -1,43 +1,40 @@
 //
 //  utf.h
-//  fallout
-
+//  utf_lib
+//
+//  Created by JOSE L CUEVAS on 5/1/22.
+//
 
 #ifndef utf_h
 #define utf_h
 
 
-typedef unsigned short Rune;	/* 16 bits */
-
-enum {
-	UTFmax		= 3,		/* maximum bytes per rune */
-	Runesync	= 0x80,		/* cannot represent part of a UTF sequence (<) */
-	Runeself	= 0x80,		/* rune and UTF sequences are the same (<) */
-	Runeerror	= 0xFFFD,	/* decoding error in UTF */
-    Runemax     = 0x10FFFF,    /* maximum rune value */
+typedef unsigned int Character;
+typedef char * CString;
+typedef struct uStringData * UString;
+struct uStringData {
+    char * text;
+    int length; //actual unicode length (how many codepoints)
+    int asize; //allocated size
+    int strlen; //lenght of *text
 };
 
+#define UTFmax 4
+extern int utf_cp_bounds[4][4];
 
-int	chartorune(Rune *rune, const char *str);
-int	runetochar(char *str, const Rune *rune);
-int	runelen(int c);
-int	utflen(const char *s);
-int utfnlen(const char *s, long m);
+UString utf8Create(int sz);
+UString utf8CreateWithCString(CString value);
 
-int runeAtIndex(char *str, int i);
-char* utfrune(const char *s, Rune c);
-char* utfrrune(const char *s, Rune c);
-const char* utfutf(const char *s1, const char *s2);
-char* utfecpy(char *to, char *e, const char *from);
+int utf8AppendUString(UString str, UString value);
+int utf8AppendCharacter(UString str, Character cp);
+int utf8AppendCString(UString str, CString value);
 
-int		isalpharune(Rune c);
-int		islowerrune(Rune c);
-int		isspacerune(Rune c);
-int		istitlerune(Rune c);
-int		isupperrune(Rune c);
-Rune		tolowerrune(Rune c);
-Rune		totitlerune(Rune c);
-Rune		toupperrune(Rune c);
+Character utf8CharacterAtIndex(CString str, int pos);
+int utf8IndexOf(CString haystack, CString needle);
+int utf8BytesFromChar(char ch);
+int utf8BytesForCodepoint(Character rune);
 
+char* utf8CharacterToCString(int cp);
+int utf8CharacterFromCString(CString str, Character *rune);
 
 #endif /* utf_h */

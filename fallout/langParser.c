@@ -57,7 +57,7 @@ int parserExpect(struct langParseState * parser, int c){
 }
 
 void parserGetChar(struct langParseState * parser){
-	Rune c;
+	Character c;
 	int l;
 	
 	l = chartorune(&c, parser->src);
@@ -503,7 +503,7 @@ error:
 
 void langParserReadString(struct langParseState * parser, struct langNode * node){
 	printf("@langParserReadString....\n");
-	ustr s = utf8_CreateString(255);
+	UString s = utf8Create(255);
 	
 	int del = parser->lastCH;
 	parserGetChar(parser);
@@ -515,13 +515,13 @@ void langParserReadString(struct langParseState * parser, struct langNode * node
 			return;
 		}
 		
-		utf8_PushCharCode(s, ch);
+        utf8AppendCharacter(s, ch);
 		
 		parserGetChar(parser);
 		ch = parserUnEscape(parser);
 	}
 	
-	utf8_Terminate(s);
+	
 	
 	if( parserExpect(parser, del) ){
 		node->type = kTK_STRING;
@@ -535,14 +535,14 @@ void langParserReadString(struct langParseState * parser, struct langNode * node
 
 void langParserReadIdentifier(struct langParseState * parser, struct langNode * node){
 	printf("@langParserReadIdentifier....\n");
-	ustr s = utf8_CreateString(255);
+	UString s = utf8Create(255);
 	utf8_PushCharCode(s, parser->lastCH);
 	
 	parserGetChar(parser);
 	int ch = parserUnEscape(parser);
 	while(parserIsAllowedInIdentifier(ch,0)){
 		
-		utf8_PushCharCode(s, ch);
+        utf8AppendCharacter(s, ch);
 			   
 		printf("word=[%d][%X]=[%s]\n", ch,ch, s->text );
 		parserGetChar(parser);
@@ -550,7 +550,6 @@ void langParserReadIdentifier(struct langParseState * parser, struct langNode * 
 
 	}
 	
-	utf8_Terminate(s);
 	printf("word_final=[%d][%X]=[%s]\n", parser->lastCH,parser->lastCH, s->text );
 	
 	node->type = kTK_IDENTIFIER;

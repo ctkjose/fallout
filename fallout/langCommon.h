@@ -24,7 +24,6 @@
 
 #include "langState.h"
 
-#include "langUTFString.h"
 
 typedef char * CSTRING;
 

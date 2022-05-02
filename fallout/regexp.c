@@ -25,7 +25,7 @@ struct cstate {
 	Renode *sub[MAXSUB];
 
 	int lookahead;
-	Rune yychar;
+    Character yychar;
 	Reclass *yycc;
 	int yymin, yymax;
 
@@ -42,9 +42,8 @@ static void die(struct cstate *g, const char *message)
 	longjmp(g->kaboom, 1);
 }
 
-static int canon(Rune c)
-{
-	Rune u = toupperrune(c);
+static int canon(Character c){
+    Character u = toupperrune(c);
 	if (c >= 128 && u < 128)
 		return c;
 	return u;
@@ -234,7 +233,7 @@ static int lexclass(struct cstate *g)
 {
 	int type = L_CCLASS;
 	int quoted, havesave, havedash;
-	Rune save = 0;
+    Character save = 0;
 
 	newcclass(g);
 

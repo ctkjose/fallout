@@ -143,7 +143,7 @@ struct langParseState {
 	int flgInBlock;
 	int flgInFunction;
 	char errorMessage[255];
-	Rune lastCH;
+	Character lastCH;
 	int lastCHLen;
 	struct langNode *lastNode;
 	struct langNode *holdNode;
