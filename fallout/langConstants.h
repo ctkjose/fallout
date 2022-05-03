@@ -22,10 +22,11 @@
 #define kTK_NULL 0
 #define kTK_IDENTIFIER 1
 #define kTK_STRING 2
-#define kTK_NUMBER 3
-#define kTK_BOOL 4
-#define kTK_KEYWORD 5
-#define kTK_OPERATOR 6
+#define kTK_INTEGER 3
+#define kTK_FLOAT 4
+#define kTK_BOOL 5
+#define kTK_KEYWORD 6
+#define kTK_OPERATOR 7
 
 
 //==============================================
@@ -45,12 +46,13 @@
 
 #define kValueNULL 0
 #define kValueUndefined 999
-#define kValueNumber 1
-#define kValueString 2
-#define kValueBool 3
-#define kValueFunc 4
-#define kValueFuncNative 5
-#define kValueObject 6
+#define kValueInteger 1
+#define kValueFloat 2
+#define kValueString 3
+#define kValueBool 4
+#define kValueFunc 5
+#define kValueFuncNative 6
+#define kValueObject 7
 
 
 #define kFNIsNamed = 0x80
@@ -81,6 +83,7 @@
 #define kST_FNCALL 35
 
 
+
 #define kST_FUNC 103
 #define kST_OBJ 104
 #define kST_OBJMEMBER 105
@@ -100,6 +103,8 @@
 #define kST_IF 		kKEWORDS_START + 2
 #define kST_ELSE 	kKEWORDS_START + 3
 #define kST_WHILE   kKEWORDS_START + 4
+#define kST_FOR     kKEWORDS_START + 5
+#define kST_FUNCTION   kKEWORDS_START + 6
 
 
 /* End Keywords */

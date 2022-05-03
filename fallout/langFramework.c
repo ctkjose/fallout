@@ -20,14 +20,17 @@ void falloutInitFramework(langSTATE st){
 	
 	falloutRegisterGlobal(st);
 }
-void falloutRegisterObject(langSTATE st, objDefinition *def){
-	if(!st || !def) return;
+OBJECT falloutRegisterObject(langSTATE st, objDefinition *def){
+	if(!st || !def) return NULL;
 	
 	
 	VALUE value = valueMakeObject(st, kObjTypeObject, def->name);
-	if(!value) return;
+	if(!value) return NULL;
 	
 	OBJECT obj = value->value.obj;
+    
+    
+    
 	//set up as a function
 	obj->args = symTabCreate(st);
 	obj->statements = icodeTableCreate();
@@ -39,6 +42,8 @@ void falloutRegisterObject(langSTATE st, objDefinition *def){
 	}
 	
 	symTabInsert(st, st->scope->symtab, value);
+    
+    return obj;
 }
 void falloutRegisterGlobal(langSTATE st){
 	
@@ -59,9 +64,12 @@ void falloutRegisterGlobal(langSTATE st){
 		"object", NULL, NULL, NULL, 0, NULL, 0, 0, 1, ObjMethods
 	};
 	
-	
-	falloutRegisterObject(st, &ObjDef);
 
+	OBJECT obj = falloutRegisterObject(st, &ObjDef);
+
+    VALUE var = valueMakeVariable(st, "version", valueMakeString(st, "1.0.1"));
+    symTabInsert(st, obj->symtab, var);
+    
 	/*
 	fnDefinition fnPrint;
 	
@@ -80,7 +88,7 @@ void falloutRegisterGlobal(langSTATE st){
 void impFnPrint(langSTATE st, ICTAB table){
 	FLL_CHECK_STATE()
 	
-	//int c = FLL_ARGC(); //
+	int argc = FLL_ARGC();
 	
 	/*
 	VALUE vMsg = FLL_ARGV(1);
@@ -92,7 +100,11 @@ void impFnPrint(langSTATE st, ICTAB table){
 	char *s = valueToString(st, vMsg);
 	*/
 	
-	char *s = FLL_STRING_ARGV(0);
-	if(!s) return;
-	printf("object.print(%s)\n", s);
+    printf("FALLOUT: ");
+    for(int i=0; i< argc; i++){
+        char *s = FLL_STRING_ARGV(i);
+        if(s) printf("%s", s);
+    }
+    
+    printf("\n");
 }

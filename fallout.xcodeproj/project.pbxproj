@@ -15,7 +15,6 @@
 		48689A7B26D1DC550066215D /* utf_tables.c in Sources */ = {isa = PBXBuildFile; fileRef = 48689A7A26D1DC550066215D /* utf_tables.c */; };
 		48689A7F26D1DD4C0066215D /* langState.c in Sources */ = {isa = PBXBuildFile; fileRef = 48689A7E26D1DD4C0066215D /* langState.c */; };
 		48689A8526D1E0710066215D /* langCommon.c in Sources */ = {isa = PBXBuildFile; fileRef = 48689A8426D1E0710066215D /* langCommon.c */; };
-		48689A8F26D1EB6C0066215D /* langUTFString.c in Sources */ = {isa = PBXBuildFile; fileRef = 48689A8E26D1EB6C0066215D /* langUTFString.c */; };
 		48689A9326D1EFCD0066215D /* regexp.c in Sources */ = {isa = PBXBuildFile; fileRef = 48689A9226D1EFCD0066215D /* regexp.c */; };
 		48689A9726D209C90066215D /* langICode.c in Sources */ = {isa = PBXBuildFile; fileRef = 48689A9626D209C90066215D /* langICode.c */; };
 		48689AA126D218AA0066215D /* langRuntime.c in Sources */ = {isa = PBXBuildFile; fileRef = 48689AA026D218AA0066215D /* langRuntime.c */; };
@@ -52,8 +51,6 @@
 		48689A8126D1DED10066215D /* fallout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fallout.h; sourceTree = "<group>"; };
 		48689A8326D1E00B0066215D /* langCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = langCommon.h; sourceTree = "<group>"; };
 		48689A8426D1E0710066215D /* langCommon.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = langCommon.c; sourceTree = "<group>"; };
-		48689A8D26D1EB6C0066215D /* langUTFString.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = langUTFString.h; sourceTree = "<group>"; };
-		48689A8E26D1EB6C0066215D /* langUTFString.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = langUTFString.c; sourceTree = "<group>"; };
 		48689A9126D1EFCD0066215D /* regexp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = regexp.h; sourceTree = "<group>"; };
 		48689A9226D1EFCD0066215D /* regexp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = regexp.c; sourceTree = "<group>"; };
 		48689A9526D209C90066215D /* langICode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = langICode.h; sourceTree = "<group>"; };
@@ -140,8 +137,6 @@
 				48689A8126D1DED10066215D /* fallout.h */,
 				48689A8326D1E00B0066215D /* langCommon.h */,
 				48689A8426D1E0710066215D /* langCommon.c */,
-				48689A8E26D1EB6C0066215D /* langUTFString.c */,
-				48689A8D26D1EB6C0066215D /* langUTFString.h */,
 				48689A9526D209C90066215D /* langICode.h */,
 				48689A9626D209C90066215D /* langICode.c */,
 				48689A9926D20D870066215D /* langConstants.h */,
@@ -230,7 +225,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				48689AA126D218AA0066215D /* langRuntime.c in Sources */,
-				48689A8F26D1EB6C0066215D /* langUTFString.c in Sources */,
 				48689A9726D209C90066215D /* langICode.c in Sources */,
 				48689A9326D1EFCD0066215D /* regexp.c in Sources */,
 				48689AAC26D4172C0066215D /* langFramework.c in Sources */,

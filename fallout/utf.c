@@ -4,6 +4,7 @@
 //  Small library to handle UTF8 strings.
 //  Inspired by Rob Pike & Ken Thompson UTF work on Plan9 Library
 //  https://github.com/yhcote/plan9c
+//  https://9fans.github.io/plan9port/
 //  https://en.wikipedia.org/wiki/UTF-8
 //
 //  Created by JOSE L CUEVAS on 5/1/22.
@@ -153,34 +154,45 @@ int utf8AppendCharacter(UString str, Character cp){
 ///Returns 0 if  error.
 Character utf8CharacterAtIndex(CString str, int pos){
 
-    int i = 0;
+    int i = 0, bytes;
     char *p = str;
     
     while(p){
         char ch = *p;
         if(ch == '\0') break;
-        int sz = utf8BytesFromChar(ch);
-        if( i == pos){
-            if(sz == 1) return ch;
+        bytes = utf8BytesFromChar(ch);
+        if( i++ == pos){
+            if(bytes == 1) return ch;
             Character rune;
-            sz = utf8CharacterFromCString(p, &rune);
+            bytes = utf8CharacterFromCString(p, &rune);
             return rune;
         }
-        p++;
-        i++;
+        p+=bytes;
     }
     
     return 0;
 }
 
-///Returns the index of the first instance of `needle` found at `haystack`.
-///
-///Returns -1 if `needle` is not found.
-int  utf8IndexOf(CString haystack, CString needle){
 
-    int i = 0;
+/// Returns the index of the first instance of  `needle` found at `haystack`.
+///
+/// @param haystack A `char *` string with the UTF8 string.
+/// @param needle A `char *` string with  the UTF8  to look for.
+/// @param start An `int` with the index where the search will start.
+int  utf8IndexOf(CString haystack, CString needle, int start){
+
+    int i = -1;
     char *p = haystack;
     size_t nsz = strlen(needle);
+    
+    if( start > 0){
+        while(p){
+            char ch = *p;
+            if(ch == '\0') break;
+            if( ++i == start) break;
+            p+= utf8BytesFromChar(ch);
+        }
+    }
     
     while(p){
         char ch = *p;
@@ -196,17 +208,16 @@ int  utf8IndexOf(CString haystack, CString needle){
                 cmp = 1;
             }
         }
-        if(cmp){
-            if( strncmp((const char *)p, (const char *)needle, nsz) == 0 ){
-                return i;
-            }
+        if(cmp && strncmp((const char *)p, (const char *)needle, nsz) == 0 ){
+            return i;
         }
-        p++;
+        p+=sz;
         i++;
     }
     
     return -1;
 }
+
 ///Returns the number of bytes for a codepoint that starts with the char in `ch`.
 ///
 ///The char `ch` is the first byte of the codepoint.

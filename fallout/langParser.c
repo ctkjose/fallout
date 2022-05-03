@@ -12,7 +12,7 @@
 
 
 const char *langKeywords[] = {
-	"var", "let", "if","else","while"
+	"var", "let", "if","else","while","for", "function"
 };
 
 
@@ -32,6 +32,7 @@ void parserRaiseError(struct langParseState * parser, const char *msg){
 	parser->abort = 1;
 	parser->st->abort = 1;
 	
+    //FIX change error type
 	ERROR err = langCreateError(kERR_SYNTAX, (char *) msg, 1, parser->srcLine);
 	langRaiseError(parser->st, err);
 }
@@ -60,7 +61,7 @@ void parserGetChar(struct langParseState * parser){
 	Character c;
 	int l;
 	
-	l = chartorune(&c, parser->src);
+	l = utf8CharacterFromCString((CString) parser->src, &c);
 	parser->lastCHLen = l;
 	
 	parser->srcIDX += l;
@@ -166,7 +167,8 @@ langNODE tokenCreate(){
 	node->type = 0;
 	node->srcLine = 0;
 	node->operator = 0;
-	node->number = 0;
+	node->vInteger = 0;
+    node->vFloat = 0.0;
 	node->keyword = 0;
 	node->text = NULL;
 	
@@ -450,10 +452,10 @@ void langParserReadOperator(struct langParseState * parser, struct langNode * no
 void langParserReadNumber(struct langParseState * parser, struct langNode * node){
 	printf("@langParserReadNumber....\n");
 	
-	char s[30];
+	char s[30] = "";
 	int i = 0;
 	
-	node->type = kTK_NUMBER;
+	node->type = kTK_INTEGER;
 	
 	
 	
@@ -467,11 +469,11 @@ void langParserReadNumber(struct langParseState * parser, struct langNode * node
 			val = (val << 4) | (parserCharConvertHex(parser->lastCH) & 0xF);
 			
 			
-			node->number = val;
+			node->vInteger = val;
 			return;
 		}
 		
-		s[i++] = '0';
+		s[i++] = '\0';
 	}
 	//get the whole part
 	while(isdigit(parser->lastCH)){
@@ -479,9 +481,10 @@ void langParserReadNumber(struct langParseState * parser, struct langNode * node
 		s[i++] = parser->lastCH;
 		parserGetChar(parser);
 	}
-	
+    s[i] = '\0';
 	
 	if(parser->lastCH == '.'){
+        node->type = kTK_FLOAT;
 		s[i++] = '.';
 		parserGetChar(parser);
 		while(isdigit(parser->lastCH) || (parser->lastCH == 'e') || (parser->lastCH == 'E') || (parser->lastCH == '+') || (parser->lastCH == '-') ){
@@ -489,11 +492,16 @@ void langParserReadNumber(struct langParseState * parser, struct langNode * node
 			s[i++] = parser->lastCH;
 			parserGetChar(parser);
 		}
+        s[i] = '\0';
 	}
 	
-	s[i]=0;
+	
 	printf("number str=[%s]\n", s);
-	node->number = atof(s);
+    if(node->type == kTK_FLOAT){
+        node->vFloat = atof(s);
+    }else{
+        node->vInteger = atol(s);
+    }
 	return;
 	
 error:
@@ -509,7 +517,7 @@ void langParserReadString(struct langParseState * parser, struct langNode * node
 	parserGetChar(parser);
 	int ch  = parserUnEscape(parser);
 	
-	while (ch != del) {
+    while (ch != del) {
 		if (ch == 0){
 			parserRaiseSyntaxError(parser, "Syntax Error, string not terminated");
 			return;
@@ -536,7 +544,7 @@ void langParserReadString(struct langParseState * parser, struct langNode * node
 void langParserReadIdentifier(struct langParseState * parser, struct langNode * node){
 	printf("@langParserReadIdentifier....\n");
 	UString s = utf8Create(255);
-	utf8_PushCharCode(s, parser->lastCH);
+    utf8AppendCharacter(s, parser->lastCH);
 	
 	parserGetChar(parser);
 	int ch = parserUnEscape(parser);
@@ -641,7 +649,7 @@ void parserFunctionBody(langPARSER parser, ICTAB table, int del){
 		if( node->type == kTK_IDENTIFIER ){
 		
 			if( tokenIsKeyword(node) ){
-				printf("is keyword: %d=%d=%s\n", node->type, node->keyword, node->text);
+				//printf("is keyword: %d=%d=%s\n", node->type, node->keyword, node->text);
 				parseKeyword(parser, table, node->keyword);
 				tokenFree(node);
 				continue;
@@ -671,6 +679,8 @@ void parseKeyword(langPARSER parser, ICTAB table, int keyword){
 		parseIfStatement(parser, table);
     }else if(keyword == kST_WHILE){
         parseWhileStatement(parser, table);
+    }else if(keyword == kST_FUNCTION){
+        parseFuncStatement(parser, table);
 	}
 }
 int parseExpression(langPARSER parser, ICTAB table){
@@ -733,8 +743,8 @@ int parseExpressionSimple(langPARSER parser, ICTAB table){
 			unaryExpr = icodeAllocate(parser, kST_OP);
 			ICODE uFx = icodeAllocate(parser, kST_LITERAL);
 			uFx->srcLine = parser->srcLine;
-			uFx->ref = valueCreate(parser->st,kValueNumber);
-			uFx->ref->value.number = -1;
+			uFx->ref = valueCreate(parser->st,kValueInteger);
+			uFx->ref->value.asInteger = -1;
 			icodeTablePush(unaryExpr->args, uFx);
 			
 			
@@ -824,13 +834,20 @@ int parseExpressionFactor(langPARSER parser, ICTAB table){
 	debugDumpToken(node, "FACTOR:");
 	
 	//variable
-	if(node->type == kTK_NUMBER){
+	if(node->type == kTK_INTEGER){
 		ICODE e = icodeAllocate(parser, kST_LITERAL);
 		e->srcLine = parser->srcLine;
-		e->ref = valueCreate(parser->st,kValueNumber);
-		e->ref->value.number = node->number;
+		e->ref = valueCreate(parser->st,kValueInteger);
+		e->ref->value.asInteger = node->vInteger;
 		icodeTablePush(table, e);
 		return 1;
+    }else if(node->type == kTK_FLOAT){
+        ICODE e = icodeAllocate(parser, kST_LITERAL);
+        e->srcLine = parser->srcLine;
+        e->ref = valueCreate(parser->st, kValueFloat);
+        e->ref->value.asFloat = node->vFloat;
+        icodeTablePush(table, e);
+        return 1;
 	}else if(node->type == kTK_STRING){
 		ICODE e = icodeAllocate(parser, kST_LITERAL);
 		e->srcLine = parser->srcLine;
@@ -940,10 +957,11 @@ int parseDeclarationVariable(langPARSER parser, ICTAB table){
 			return 0;
 		}
 	}else{
+        //FIX must be an expression
 		//Create assigmnet to UNDEFINED
 		ICODE defValue = icodeAllocate(parser, kST_LITERAL);
 		defValue->ref = valueCreate(parser->st,kValueUndefined);
-		defValue->ref->value.number = 0;
+		defValue->ref->value.asInteger = 0;
 		icodePush(e, defValue);
 	}
 	
@@ -1153,6 +1171,7 @@ int parseWhileStatement(langPARSER parser, ICTAB table){
     icodePush(stmt, icEXPR);
     
     if(!tokenExpectOperator(parser,opType_RP)){
+        icodeFree(stmt);
         parserRaiseSyntaxError(parser, "Expecting `)` in WHILE statement");
         return 0;
     }
@@ -1170,14 +1189,168 @@ int parseWhileStatement(langPARSER parser, ICTAB table){
     }
     
     if(block){
-        debugDumpStatements(block->args, "WHILEBLOCK", 1);
+        //debugDumpStatements(block->args, "WHILEBLOCK", 1);
         icodePush(stmt, block);
     }else{
+        icodeFree(stmt);
         parserRaiseSyntaxError(parser, "Expecting statements in WHILE statement");
         return 0;
     }
     
     icodeTablePush(table, stmt);
+    return 1;
+}
+void parseFormalParameter(langPARSER parser, ICTAB table, OBJECT fnObj){
+    
+    int argc = 0;
+     
+    struct langNode * node;
+    node = tokenNext(parser);
+    
+    debugDumpToken(node, "PARAMTOKEN");
+    
+    if(!node || (node->type != kTK_IDENTIFIER) ){
+        if(node) tokenRestore(parser, node);
+        parserRaiseSyntaxError(parser, "expecting identifier in parameter declaration");
+        return;
+    }
+    
+    if( tokenIsKeyword(node) ){
+        if(node) tokenRestore(parser, node);
+        parserRaiseSyntaxError(parser, "reserved keyword in parameter declaration");
+        return;
+    }
+    
+    argc = (++fnObj->paramCount);
+    if(argc == 1){
+        fnObj->params = (fnParameter *) malloc(sizeof(fnParameter) );
+    }else{
+        fnObj->params = (fnParameter *) realloc(fnObj->params, argc * sizeof(fnParameter) );
+    }
+    fnParameter *e = &fnObj->params[argc - 1];
+    
+    e->idx = argc-1;
+    e->name = strdup((char *) node->text);
+    e->initValue = NULL;
+    
+    node = tokenNext(parser);
+    if(!node || node->type != kTK_OPERATOR){
+        if(node) tokenRestore(parser, node);
+        return;
+    }
+    
+    if(node->operator == opType_Assign){
+        tokenFree(node);
+
+        e->initValue = parseICodeExpression(parser);
+        if(! e->initValue){
+            parserRaiseSyntaxError(parser,"expecting expression in assigment.");
+        }
+        
+        
+        node = tokenNext(parser);
+        if(!node || (node->type != kTK_OPERATOR)){
+            return;
+        }
+    }
+    
+    if(node->operator == opType_Comma){
+        tokenFree(node);
+        parseFormalParameter(parser, table, fnObj);
+    }else if(node->operator == opType_RP){
+        tokenRestore(parser, node);
+    }else{
+        if(node) tokenRestore(parser, node);
+        return;
+    }
+    
+    
+    return;
+}
+int parseFuncStatement(langPARSER parser, ICTAB table){
+    //FUNCTION NAME (ARGS...){}
+    //FUNCTION (ARGS...){}
+    
+    
+    ICTAB icParams = icodeTableCreate();
+    
+    ICODE fnDeclare = icodeAllocate(parser, kST_FUNCTION);
+    fnDeclare->args = icodeTableCreate();
+    
+
+    struct langNode * node;
+    node = tokenNext(parser);
+    if(!node){
+        icodeFree(fnDeclare);
+        return 0;
+    }
+    
+    CString name;
+   
+    int isClosure = 0;
+    if(node->type == kTK_IDENTIFIER){
+        name = strdup((char *) node->text);
+        
+        node = tokenNext(parser);
+        if(!node){
+            icodeFree(fnDeclare);
+            parserRaiseSyntaxError(parser, "expecting formal parameters in function declaration");
+            return 0;
+        }
+        
+    }else{
+        isClosure = 1;
+        name = langCreateID("FNANOM", 10);
+    }
+    
+    VALUE vObj = valueMakeObject(parser->st, kObjTypeFunc, name);
+    if(!vObj){
+        icodeFree(fnDeclare);
+        parserRaiseError(parser, "Unable to create function definition.");
+        return 0;
+    }
+    
+    
+    fnDeclare->ref = vObj;
+    OBJECT fnObj = vObj->value.obj;
+    
+    strncpy(fnObj->name, name, kSZ_MAX_FN_NAME);
+    
+    fnObj->isClosure = isClosure;
+    fnObj->paramCount = 0;
+    
+    if( (node->type != kTK_OPERATOR) || (node->operator != opType_LP)){
+        tokenRestore(parser, node);
+        icodeFree(fnDeclare);
+        parserRaiseSyntaxError(parser, "expecting formal parameters in function declaration");
+        return 0;
+    }
+    
+    parseFormalParameter(parser, icParams, fnObj);
+    if(!tokenExpectOperator(parser, opType_RP)){
+        parserRaiseSyntaxError(parser, "Expecting `(` in WHILE statement");
+        return 0;
+    }
+    
+    
+    if(!tokenExpectOperator(parser, opType_LKey)){
+        icodeFree(fnDeclare);
+        parserRaiseSyntaxError(parser, "expecting function block");
+        return 0;
+    }
+    
+    fnObj->fnBlock = parserICodeBlock(parser);
+    
+    if(!fnObj->fnBlock){
+        icodeFree(fnDeclare);
+        parserRaiseSyntaxError(parser, "expecting function block");
+        return 0;
+    }
+    
+    
+    //debugDumpStatements(fnObj->fnBlock->args, "FNBLOCK", 1);
+    icodeTablePush(table, fnDeclare);
+    
     return 1;
 }
 
@@ -1244,7 +1417,7 @@ ICODE parserICodeBlock(langPARSER parser){
 		if( node->type == kTK_IDENTIFIER ){
 		
 			if( tokenIsKeyword(node) ){
-				printf("is keyword: %d=%d=%s\n", node->type, node->keyword, node->text);
+				//printf("is keyword: %d=%d=%s\n", node->type, node->keyword, node->text);
 				parseKeyword(parser, table, node->keyword);
 				tokenFree(node);
 				continue;
@@ -1585,9 +1758,11 @@ void debugDumpToken(langNODE node, char* prefix){
 		printf("%s OPERATOR [%c]\n",prefix, node->operator);
 	}else if(node->type == kTK_STRING){
 		printf("%s STRING [%s]\n",prefix, node->text);
-	}else if(node->type == kTK_NUMBER){
-		printf("%s NUMBER [%f]\n",prefix, node->number);
-	}else if(node->type == kTK_IDENTIFIER){
+	}else if(node->type == kTK_INTEGER){
+		printf("%s NUMBER [%ld]\n",prefix, node->vInteger);
+    }else if(node->type == kTK_FLOAT){
+        printf("%s NUMBER [%f]\n",prefix, node->vFloat);
+    }else if(node->type == kTK_IDENTIFIER){
 		printf("%s IDENTIFIER [%s]\n",prefix, node->text);
 	}else{
 		printf("%s OTHER TYPE=%d\n",prefix, node->type);

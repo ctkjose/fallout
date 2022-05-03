@@ -85,6 +85,8 @@ typedef void (* CFUNCTION)(langSTATE, ICTAB);
 typedef struct langFuncDefinition fnDefinition;
 typedef fnDefinition * FNDEF;
 
+typedef struct langParameter fnParameter;
+
 
 typedef struct langObjectDefinition objDefinition;
 typedef objDefinition * OBJDEF;
@@ -121,7 +123,8 @@ struct langNode {
 	int type;
 	int srcLine;
 	int operator;
-	double number;
+    long vInteger;
+    double vFloat;
 };
 
 struct langError {
@@ -153,23 +156,28 @@ struct langParseState {
 
 struct langScope {
 	langSTATE st;
-	
+    int isRoot;
 	VALUES symtab;
 	VALUE returnValue;
 	SCOPE parent;
 	int srcLine;
-	int fnArgsPosition;
+	int paramCount;
+    fnParameter *params;
 };
 
 struct langSymbols {
 	int length;
+    int isRoot;
 	VALUE *items;
+    VALUES outerVars;
+    
 };
 
 struct langSymbol {
 	union {
 		int boolean;
-		double number;
+		long asInteger;
+        double asFloat;
 		char *string;  //utf8
 		OBJECT obj;
 	} value;
@@ -205,6 +213,13 @@ struct langIcodeTable {
 	ICODE *items;
 };
 
+struct langParameter {
+    int idx;
+    CString name;
+    VALUE value;
+    ICODE initValue; //an Expression statement
+};
+
 struct langOBJECT {
 	char name[kSZ_MAX_FN_NAME + 1];
 	char *id;
@@ -216,14 +231,21 @@ struct langOBJECT {
 	VALUE proto;
 	
 	//Function like Objects
+    VALUES outerVars;
 	ICTAB statements;
 	VALUES args;
+    
+    int isClosure;
+    int paramCount;
+    fnParameter *params;
+    ICODE fnBlock;
 	
 	void *data;
 	//implementation data
 	union {
 		struct {
 			int argc;
+            int flag;
 			CFUNCTION callback;
 		} cfn; //built-in cfunction
 	} imp;

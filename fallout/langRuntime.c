@@ -31,7 +31,10 @@ SCOPE runtimeScopeCreate(langSTATE st, SCOPE parent){
 	scope->st = st;
 	scope->symtab = symTabCreate(st);
 	scope->returnValue = valueMakeUndefined(st);
-	scope->fnArgsPosition = 0;
+	
+    scope->paramCount = 0;
+    scope->params = NULL;
+    
 	
 	if(parent){
 		scope->parent = parent;
@@ -50,6 +53,11 @@ void runtimeScopePush(langSTATE st, SCOPE scope){
 		runtimeRaiseError(st,"Stack overflow!");
 		return;
 	}
+    if(st->scopeIdx < 0){
+        scope->isRoot = 1;
+        if(scope->symtab) scope->symtab->isRoot = 1;
+    }
+    
 	st->scopeStack[++st->scopeIdx] = scope;
 	st->scopeSize++;
 	
@@ -84,13 +92,18 @@ VALUE stackExecExpressionSimple(langSTATE st, ICTAB table){
 	}
 	
 	
-	double v2 = 0;
-	double v1 = valueToDouble(st, value1);
-	
+    int kType = kValueFloat;
+    double v2 = 0;
+    double v1 = valueToDouble(st, value1); v2 = 0;
+    
+    if(value1->type == kValueInteger){
+        kType = kValueInteger;
+    }
+    
 	VALUE value2;
 	
-	VALUE vReturn = valueCreate(st, kValueNumber);
-	vReturn->value.number = 0;
+	VALUE vReturn = valueCreate(st, kValueFloat);
+	vReturn->value.asFloat = 0;
 	
 	int isBool = 0;
 	do {
@@ -102,13 +115,13 @@ VALUE stackExecExpressionSimple(langSTATE st, ICTAB table){
 			v2 = valueToDouble(st, value2);
 			v1 = v1 * v2;
 			
-			
+            if(kType == kValueInteger) v1 = (float)((long)v1);
 		}else if(ic->code == opType_Plus){
 			isBool = 0;
 			v2 = valueToDouble(st, value2);
 			v1 = v1 + v2;
 			
-			vReturn->value.number = v1;
+            if(kType == kValueInteger) v1 = (float)((long)v1);
 		}else if(ic->code == opType_OR){
 			isBool = 1;
 			v1 = (v1 >= 0);
@@ -126,8 +139,11 @@ VALUE stackExecExpressionSimple(langSTATE st, ICTAB table){
 	if(isBool){
 		vReturn->type = kValueBool;
 		vReturn->value.boolean = v1;
-	}else{
-		vReturn->value.number = v1;
+    }else if(kType == kValueInteger){
+        vReturn->type = kValueInteger;
+        vReturn->value.asInteger = (long)v1;
+    }else{
+        vReturn->value.asFloat = v1;
 	}
 	
 	return vReturn;
@@ -148,13 +164,18 @@ VALUE stackExecExpressionTerm(langSTATE st, ICTAB table){
 	}
 	
 	
+    int kType = kValueFloat;
+    if(value1->type == kValueInteger){
+        kType = kValueInteger;
+    }
+    
 	double v2 = 0;
 	double v1 = valueToDouble(st, value1);
 	
 	VALUE value2;
 	
-	VALUE vReturn = valueCreate(st, kValueNumber);
-	vReturn->value.number = 0;
+	VALUE vReturn = valueCreate(st, kValueFloat);
+	vReturn->value.asFloat = 0;
 	
 	int isBool = 0;
 	do {
@@ -166,19 +187,19 @@ VALUE stackExecExpressionTerm(langSTATE st, ICTAB table){
 			v2 = valueToDouble(st, value2);
 			v1 = v1 * v2;
 			
-			
+            if(kType == kValueInteger) v1 = (float)((long)v1);
 		}else if(ic->code == opType_Divide){
 			isBool = 0;
 			v2 = valueToDouble(st, value2);
 			v1 = v1 * v2;
 			
-			vReturn->value.number = v1;
+            if(kType == kValueInteger) v1 = (float)((long)v1);
 		}else if(ic->code == opType_Modulo){
 			isBool = 1;
 			v2 = valueToDouble(st, value2);
 			v1 = (double) ((int)v1 % (int)v2);
 			
-			vReturn->value.number = v1;
+            if(kType == kValueInteger) v1 = (float)((long)v1);
 			
 		}else if(ic->code == opType_AND){
 			isBool = 1;
@@ -198,8 +219,11 @@ VALUE stackExecExpressionTerm(langSTATE st, ICTAB table){
 	if(isBool){
 		vReturn->type = kValueBool;
 		vReturn->value.boolean = v1;
+    }else if(kType == kValueInteger){
+        vReturn->type = kValueInteger;
+        vReturn->value.asInteger = (long) v1;
 	}else{
-		vReturn->value.number = v1;
+		vReturn->value.asFloat = v1;
 	}
 	
 	return vReturn;
@@ -256,7 +280,7 @@ int runtimeCompareValue(langSTATE st, int op, VALUE l, VALUE r){
 		if(op == opType_Greater) return (sv > 0);
 		if(op == opType_GreaterEqual) return (sv >= 0);
 		return 0;
-	}else if(l->type == kValueNumber ){
+	}else if(l->type == kValueInteger ){
 		double v1 = valueToDouble(st, l);
 		double v2 = valueToDouble(st, r);
 		
@@ -331,13 +355,21 @@ int stackGetBool(langSTATE st, ICTAB table){
 	
 	return b;
 }
-double stackGetNumber(langSTATE st, ICTAB table){
+long stackGetLong(langSTATE st, ICTAB table){
 	VALUE v = stackGetValue(st, table);
 	if(!v) return 0;
 	
-	double d = valueToDouble(st, v);
+	long l = valueToLong(st, v);
 	
-	return d;
+	return l;
+}
+double stackGetFloat(langSTATE st, ICTAB table){
+    VALUE v = stackGetValue(st, table);
+    if(!v) return 0;
+    
+    double d = valueToDouble(st, v);
+    
+    return d;
 }
 
 VALUE stackGetValue(langSTATE st, ICTAB table){
@@ -363,11 +395,7 @@ VALUE stackGetValue(langSTATE st, ICTAB table){
 
 int stackGetParameterCount(langSTATE st, ICTAB table){
 	SCOPE fnScope = st->scope;
-	if(table->length <= 0) return 0;
-	
-	int c = (table->length - 1) - fnScope->fnArgsPosition;
-	
-	return c;
+	return fnScope->paramCount;
 }
 
 //First parameter is idx=0
@@ -375,17 +403,13 @@ VALUE stackGetParameter(langSTATE st, ICTAB table, int idx){
 	SCOPE fnScope = st->scope;
 	
 	VALUE UndefinedValue = valueCreate(st,kValueUndefined);
-	UndefinedValue->value.number = 0;
+	UndefinedValue->value.asInteger = 0;
+		
+	if(idx >= fnScope->paramCount) return UndefinedValue;
+    
+    valueFree(UndefinedValue);
+    return fnScope->params[idx].value;
 	
-	if(table->length <= 0) return UndefinedValue;
-	
-	int p = fnScope->fnArgsPosition + idx;
-	if(p >= table->length) return UndefinedValue;
-	
-	table->position = p;
-	
-	valueFree(UndefinedValue);
-	return stackGetValue(st, table);
 }
 VALUE runtimeExecuteStack(langSTATE st, ICTAB table){
 	
@@ -398,7 +422,7 @@ VALUE runtimeExecuteStack(langSTATE st, ICTAB table){
 	
 	//printf("runtimeExecuteICodeTable(SCOPE=%d)\n", st->scopeIdx);
 	
-	SCOPE scopeFn = NULL;
+	//SCOPE scopeFn = NULL;
 	for (i = 0; i < table->length; i++) {
 		ICODE ic;
 		ic = table->items[i];
@@ -414,6 +438,8 @@ VALUE runtimeExecuteStack(langSTATE st, ICTAB table){
 			statementIF(st, ic->args);
         }else if(ic->type == kST_WHILE){
             statementWHILE(st, ic->args);
+        }else if(ic->type == kST_FUNCTION){
+            statementFunctionInit(st, ic);
 		}
 	}
 		
@@ -441,7 +467,8 @@ void runtimeExecuteState(langSTATE st){
 	
 	VALUE returnValue = runtimeExecuteStack(st, st->root);
 	
-	debugDumpSymbols(st->scopeStack[0]->symtab, "ROOTSCOPE", 1);
+	
+    //debugDumpSymbols(st->scopeStack[0]->symtab, "ROOTSCOPE", 1);
 }
 void runtimeExecuteSource(langSTATE st, const char *source){
 	langPARSER parser;
@@ -457,53 +484,129 @@ void runtimeExecuteSource(langSTATE st, const char *source){
 	parser->st = st;
 	
 	st->root = parserSource(parser, source);
+    printf("PARSE DONE =====================================\n");
 	debugDumpStatements(st->root, "SCRIPTROOT", 1);
-	
-	runtimeExecuteState(st);
+    printf("=====================================\n");
+    
+    runtimeExecuteState(st);
 	
 	
 	
 	return;
 }
-
-
-VALUE runtimeExecuteCFunction(langSTATE st, OBJECT fn, ICTAB table){
-	
-	VALUE UndefinedValue = valueCreate(st,kValueUndefined);
-	UndefinedValue->value.number = 0;
-	
-	if(!st || !fn) return UndefinedValue;
-	
-	if(fn->type != kObjTypeFuncNative){
-		return UndefinedValue;
-	}
-	
-	int argc = fn->imp.cfn.argc;
-	CFUNCTION cfn = fn->imp.cfn.callback;
-	
-	if(!cfn){
-		runtimeRaiseError(st, "RUNTIME ERROR: Unable to execute function. [FNCALL-500]");
-		return UndefinedValue;
-	}
-	
-	SCOPE fnScope = runtimeScopeCreate(st, st->scope);
-	if(!fnScope){
-		runtimeRaiseError(st, "RUNTIME ERROR: Unable to execute function. [FNCALL-501]");
-		return UndefinedValue;
-	}
-
-	valueFree(UndefinedValue);
-	
-	fnScope->fnArgsPosition = table->position;
-	fnScope->returnValue = UndefinedValue;
-	runtimeScopePush(st, fnScope);
-	
-	(*cfn)(st, table);
-	
-	runtimeScopePop(st);
-	
-	return fnScope->returnValue;
+VALUE runtimeExecuteFunction(langSTATE st, OBJECT fnObj, ICTAB table){
+    
+    VALUE UndefinedValue = valueCreate(st,kValueUndefined);
+    UndefinedValue->value.asInteger = 0;
+    
+    if(!st || !fnObj) return UndefinedValue;
+    
+    if(fnObj->type == kObjTypeFuncNative){
+        fnObj->paramCount = 0;
+    }
+    
+    SCOPE fnScope = runtimeScopeCreate(st, st->scope);
+    if(!fnScope){
+        runtimeRaiseError(st, "RUNTIME ERROR: Unable to execute function. [FNCALL-501]");
+        return UndefinedValue;
+    }
+    
+    int pIdx=0;
+    int argc = table->length - 1;
+    if( argc > 0){
+        int isNewParam = 0;
+        for(pIdx=0; pIdx < argc; pIdx++){
+            if(pIdx + 1 > fnObj->paramCount){
+                if(++fnObj->paramCount == 1){
+                    fnObj->params = (fnParameter *) malloc(sizeof(fnParameter) );
+                }else{
+                    fnObj->params = (fnParameter *) realloc(fnObj->params, fnObj->paramCount * sizeof(fnParameter) );
+                }
+                isNewParam = 1;
+            }else{
+                isNewParam = 0;
+            }
+            
+            fnParameter *e = &fnObj->params[pIdx];
+            
+            if( isNewParam ){
+                char pName[25];
+                sprintf(pName, "_ARGV%d", fnObj->paramCount);
+                e->idx = fnObj->paramCount - 1;
+                e->name = strdup((char *) pName);
+            }
+            
+            e->value = stackGetValue(st, table);
+        }
+        while(pIdx < fnObj->paramCount){
+            fnParameter *e = &fnObj->params[pIdx];
+            if( e->initValue ){
+                VALUE v = stackExecExpression(st, e->initValue->args);
+                if( v ) e->value = v;
+            }
+            pIdx++;
+        }
+    }
+    
+    if( strcmp(fnObj->name, "doThis") == 0){
+        printf("fnDoThis\n");
+    }
+    
+    for(pIdx=0; pIdx<fnObj->paramCount; pIdx++){
+        fnParameter *e = &fnObj->params[pIdx];
+        VALUE v = e->value;
+        if(!v) v = valueMakeVariable(st, e->name, valueMakeNULL(st));
+        
+        VALUE sym = symTabSearch(st, fnScope->symtab, e->name);
+        if(!sym){
+            sym = valueMakeVariable(st, e->name, valueMakeNULL(st));
+            symTabInsert(st, fnScope->symtab, sym );
+        }
+        if(!sym){
+            //TODO handle error....
+            continue;
+        }
+        if(v){
+            valueAssign(st, sym, v);
+        }
+    }
+    
+    fnScope->returnValue = UndefinedValue;
+    
+    //Mirror params
+    fnScope->paramCount = fnObj->paramCount;
+    fnScope->params = fnObj->params;
+    
+    runtimeScopePush(st, fnScope);
+    
+    if(fnObj->type == kObjTypeFunc){
+        ICODE block = fnObj->fnBlock;
+        
+        if(block){
+            runtimeExecuteStack(st, block->args);
+            icodeTableRewind(block->args);
+        }
+        
+    }else if(fnObj->type == kObjTypeFuncNative){
+        CFUNCTION cfn = fnObj->imp.cfn.callback;
+    
+        if(cfn){
+            (*cfn)(st, table);
+        }else{
+            runtimeRaiseError(st, "RUNTIME ERROR: Unable to execute function. [FNCALL-500]");
+        }
+    }
+    
+    //free(fnScope->params);
+    //fnScope->paramCount=0;
+    
+    runtimeScopePop(st);
+    //valueFree(UndefinedValue);
+    
+    return fnScope->returnValue;
 }
+
+
 /*
  Executes a function call, icode FNCALL(35)
  */
@@ -562,7 +665,7 @@ VALUE statementFNCall(langSTATE st, ICTAB table){
 	if(!st || !table || !st->scope) return NULL;
 
 	VALUE UndefinedValue = valueCreate(st,kValueUndefined);
-	UndefinedValue->value.number = 0;
+	UndefinedValue->value.asInteger = 0;
 	
 	VALUE fnRef = stackGetValue(st, table);
 	
@@ -578,8 +681,8 @@ VALUE statementFNCall(langSTATE st, ICTAB table){
 	}
 	
 	
-	OBJECT obj = fnRef->value.obj;
-	if(!obj){
+	OBJECT fnObj = fnRef->value.obj;
+	if(!fnObj){
 		runtimeRaiseError(st, msg);
 		return UndefinedValue;
 	}
@@ -587,13 +690,10 @@ VALUE statementFNCall(langSTATE st, ICTAB table){
 	VALUE returnValue = UndefinedValue;
 	
 
-	if(obj->type == kObjTypeFunc){
-		///valueFree(UndefinedValue);
-		return UndefinedValue;
-	}else if(obj->type == kObjTypeFuncNative){
-		valueFree(UndefinedValue);
-		returnValue = runtimeExecuteCFunction(st, obj, table);
-		return returnValue;
+	if(fnObj->type == kObjTypeFunc || fnObj->type == kObjTypeFuncNative ){
+        valueFree(UndefinedValue);
+        returnValue = runtimeExecuteFunction(st, fnObj, table);
+        return returnValue;
 	}else{
 		runtimeRaiseError(st, msg);
 		return UndefinedValue;
@@ -614,10 +714,10 @@ VALUE statementGetRef(langSTATE st, ICTAB table, VALUE parent){
 	
 	
 	VALUE UndefinedValue = valueCreate(st,kValueUndefined);
-	UndefinedValue->value.number = 0;
+	UndefinedValue->value.asInteger = 0;
 	
 	
-	char msg[256];
+	//char msg[256]; //UNUSED
 	OBJECT obj = NULL;
 	VALUES symtab = NULL;
 	
@@ -726,4 +826,25 @@ void statementVariableInit(langSTATE st, ICTAB table){
 	symTabInsert(st, scope->symtab, var);
 	
 }
-
+void statementFunctionInit(langSTATE st, ICODE ic){
+    
+    if(!st) return;
+    if(!st->scope) return;
+    
+    OBJECT fnObj = ic->ref->value.obj;
+    if(!ic->ref){
+        //TODO handle error
+        return;
+    }
+    
+    printf("statementFunctionInit(%s)\n", fnObj->name);
+    
+    if(!fnObj->isClosure){
+        if(!strlen(fnObj->name)){
+            runtimeRaiseError(st, "Expecting name for function.");
+            return;
+        }
+        VALUE var = valueMakeVariable(st, fnObj->name, ic->ref);
+        symTabInsert(st, st->scope->symtab, var);
+    }
+}

@@ -30,11 +30,23 @@ int utf8AppendCharacter(UString str, Character cp);
 int utf8AppendCString(UString str, CString value);
 
 Character utf8CharacterAtIndex(CString str, int pos);
-int utf8IndexOf(CString haystack, CString needle);
+int  utf8IndexOf(CString haystack, CString needle, int start);
 int utf8BytesFromChar(char ch);
 int utf8BytesForCodepoint(Character rune);
 
 char* utf8CharacterToCString(int cp);
 int utf8CharacterFromCString(CString str, Character *rune);
+
+
+//From utf_tables
+int isalpharune(Character c);
+int islowerrune(Character c);
+int isspacerune(Character c);
+int istitlerune(Character c);
+int isupperrune(Character c);
+Character tolowerrune(Character c);
+Character totitlerune(Character c);
+Character toupperrune(Character c);
+
 
 #endif /* utf_h */

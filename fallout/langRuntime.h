@@ -25,7 +25,6 @@ void runtimeInitState(langSTATE st);
 void runtimeInitGlobalObject(langSTATE st);
 void runtimeExecuteSource(langSTATE st, const char *source);
 VALUE runtimeExecuteStack(langSTATE st, ICTAB table);
-VALUE runtimeExecuteCFunction(langSTATE st, OBJECT fn, ICTAB table);
 
 int runtimeCompareValue(langSTATE st, int op, VALUE l, VALUE r);
 
@@ -36,7 +35,8 @@ VALUE stackExecExpressionFactor(langSTATE st, ICTAB table);
 
 
 
-double stackGetNumber(langSTATE st, ICTAB table);
+double stackGetFloat(langSTATE st, ICTAB table);
+long stackGetLong(langSTATE st, ICTAB table);
 int stackGetBool(langSTATE st, ICTAB table);
 char * stackGetCString(langSTATE st, ICTAB table);
 VALUE stackGetValue(langSTATE st, ICTAB table);
@@ -49,6 +49,7 @@ void statementWHILE(langSTATE st, ICTAB table);
 VALUE statementFNCall(langSTATE st, ICTAB table);
 VALUE statementGetRef(langSTATE st, ICTAB table, VALUE parent);
 void statementVariableInit(langSTATE st, ICTAB args);
+void statementFunctionInit(langSTATE st, ICODE ic);
 
 
 #endif /* langRuntime_h */

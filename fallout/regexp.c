@@ -87,11 +87,12 @@ static int isunicodeletter(int c)
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || isalpharune(c);
 }
 
-static int nextrune(struct cstate *g)
-{
-	g->source += chartorune(&g->yychar, g->source);
+static int nextrune(struct cstate *g){
+    
+    
+	g->source += utf8CharacterFromCString(g->source, &g->yychar);
 	if (g->yychar == '\\') {
-		g->source += chartorune(&g->yychar, g->source);
+		g->source += utf8CharacterFromCString(g->source, &g->yychar);
 		switch (g->yychar) {
 		case 0: die(g, "unterminated escape sequence"); break;
 		case 'f': g->yychar = '\f'; return 0;
@@ -172,7 +173,7 @@ static void newcclass(struct cstate *g)
 	g->yycc->end = g->yycc->spans;
 }
 
-static void addrange(struct cstate *g, Rune a, Rune b)
+static void addrange(struct cstate *g, Character a, Character b)
 {
 	if (a > b)
 		die(g, "invalid character class range");
@@ -380,7 +381,7 @@ enum {
 struct Renode {
 	unsigned char type;
 	unsigned char ng, m, n;
-	Rune c;
+	Character c;
 	Reclass *cc;
 	Renode *x;
 	Renode *y;
@@ -575,7 +576,7 @@ enum {
 struct Reinst {
 	unsigned char opcode;
 	unsigned char n;
-	Rune c;
+	Character c;
 	Reclass *cc;
 	Reinst *x;
 	Reinst *y;
@@ -735,7 +736,7 @@ loop:
 #ifdef TEST
 static void dumpnode(Renode *node)
 {
-	Rune *p;
+	Character *p;
 	if (!node) { printf("Empty"); return; }
 	switch (node->type) {
 	case P_CAT: printf("Cat("); dumpnode(node->x); printf(", "); dumpnode(node->y); printf(")"); break;
@@ -913,18 +914,18 @@ static int iswordchar(int c)
 		(c >= '0' && c <= '9');
 }
 
-static int incclass(Reclass *cc, Rune c)
+static int incclass(Reclass *cc, Character c)
 {
-	Rune *p;
+	Character *p;
 	for (p = cc->spans; p < cc->end; p += 2)
 		if (p[0] <= c && c <= p[1])
 			return 1;
 	return 0;
 }
 
-static int incclasscanon(Reclass *cc, Rune c)
+static int incclasscanon(Reclass *cc, Character c)
 {
-	Rune *p, r;
+	Character *p, r;
 	for (p = cc->spans; p < cc->end; p += 2)
 		for (r = p[0]; r <= p[1]; ++r)
 			if (c == canon(r))
@@ -934,13 +935,13 @@ static int incclasscanon(Reclass *cc, Rune c)
 
 static int strncmpcanon(const char *a, const char *b, int n)
 {
-	Rune ra, rb;
+	Character ra, rb;
 	int c;
 	while (n--) {
 		if (!*a) return -1;
 		if (!*b) return 1;
-		a += chartorune(&ra, a);
-		b += chartorune(&rb, b);
+		a += utf8CharacterFromCString(a, &ra);
+		b += utf8CharacterFromCString(b, &rb);
 		c = canon(ra) - canon(rb);
 		if (c)
 			return c;
@@ -952,7 +953,7 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 {
 	Resub scratch;
 	int i;
-	Rune c;
+	Character c;
 
 	for (;;) {
 		switch (pc->opcode) {
@@ -983,13 +984,13 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 			break;
 
 		case I_ANYNL:
-			sp += chartorune(&c, sp);
+			sp += utf8CharacterFromCString(sp, &c);
 			if (c == 0)
 				return 0;
 			pc = pc + 1;
 			break;
 		case I_ANY:
-			sp += chartorune(&c, sp);
+			sp += utf8CharacterFromCString(sp, &c);
 			if (c == 0)
 				return 0;
 			if (isnewline(c))
@@ -997,7 +998,7 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 			pc = pc + 1;
 			break;
 		case I_CHAR:
-			sp += chartorune(&c, sp);
+			sp += utf8CharacterFromCString(sp, &c);
 			if (c == 0)
 				return 0;
 			if (flags & REG_ICASE)
@@ -1007,7 +1008,7 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 			pc = pc + 1;
 			break;
 		case I_CCLASS:
-			sp += chartorune(&c, sp);
+			sp += utf8CharacterFromCString(sp, &c);
 			if (c == 0)
 				return 0;
 			if (flags & REG_ICASE) {
@@ -1020,7 +1021,7 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 			pc = pc + 1;
 			break;
 		case I_NCCLASS:
-			sp += chartorune(&c, sp);
+			sp += utf8CharacterFromCString(sp, &c);
 			if (c == 0)
 				return 0;
 			if (flags & REG_ICASE) {

@@ -22,11 +22,13 @@
 #define	FLL_ARGV(i) stackGetParameter(st, table, i)
 
 #define FLL_STRING_ARGV(i)  valueToString(st, stackGetParameter(st, table, i))
-#define FLL_DOUBLE_ARGV(i)  valueToNumber(st, stackGetParameter(st, table, i))
-#define FLL_INT_ARGV(i)  (int)valueToNumber(st, stackGetParameter(st, table, i))
+#define FLL_DOUBLE_ARGV(i)  valueToDouble(st, stackGetParameter(st, table, i))
+#define FLL_LONG_ARGV(i)     valueToLong(st, stackGetParameter(st, table, i))
+#define FLL_INT_ARGV(i)  (int)valueToLong(st, stackGetParameter(st, table, i))
 #define FLL_BOOL_ARGV(i)  (int)valueToBool(st, stackGetParameter(st, table, i))
 
 
 void falloutInitFramework(langSTATE st);
+OBJECT falloutRegisterObject(langSTATE st, objDefinition *def);
 
 #endif /* langFramework_h */

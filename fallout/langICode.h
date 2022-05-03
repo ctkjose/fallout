@@ -41,7 +41,8 @@ int valueGetType(const char *typespec);
 
 VALUE valueMakeUndefined(langSTATE st);
 VALUE valueMakeNULL(langSTATE st);
-VALUE valueMakeNumber(langSTATE st, double v);
+VALUE valueMakeNumber(langSTATE st, long v);
+VALUE valueMakeFloat(langSTATE st, double v);
 VALUE valueMakeBool(langSTATE st, int v);
 VALUE valueMakeString(langSTATE st, char *v);
 
@@ -53,6 +54,7 @@ void valueAssign(langSTATE st, VALUE var, VALUE value);
 
 int valueToBool(langSTATE st, VALUE value);
 double valueToDouble(langSTATE st, VALUE value);
+long valueToLong(langSTATE st, VALUE value);
 char *valueToString(langSTATE st, VALUE value);
 VALUE valueFromStatement(langSTATE st, ICODE e);
 
@@ -63,6 +65,7 @@ VALUES symTabCreate(langSTATE st);
 void symTabFree(VALUES values);
 int symTabInsert(langSTATE st, VALUES symtab, VALUE value);
 VALUE symTabLookup(langSTATE st, VALUES symtab, char *name);
+VALUE symTabSearch(langSTATE st, VALUES symtab, char *name);
 
 #pragma mark OBJECTS
 OBJECT objectCreate(langSTATE st, int type, char *name, OBJECT *prototype);

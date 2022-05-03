@@ -68,6 +68,7 @@ int parseAssigment(langPARSER parser, ICTAB table, char *name, ICODE parent);
 void parseKeyword(langPARSER parser, ICTAB table, int keyword);
 int parseIfStatement(langPARSER parser, ICTAB table);
 int parseWhileStatement(langPARSER parser, ICTAB table);
+int parseFuncStatement(langPARSER parser, ICTAB table);
 int parseDeclarationVariable(langPARSER parser, ICTAB table);
 void parserFunctionBody(langPARSER parser, ICTAB table, int del);
 

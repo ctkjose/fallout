@@ -209,23 +209,30 @@ void valueFree(VALUE value){
 VALUE valueMakeNULL(langSTATE st){
 	VALUE value = valueCreate(st, kValueNULL);
 	if(!value) return NULL;
-	value->value.number = 0;
+	value->value.asInteger = 0;
 	
 	return value;
 }
 VALUE valueMakeUndefined(langSTATE st){
 	VALUE value = valueCreate(st, kValueUndefined);
 	if(!value) return NULL;
-	value->value.number = 0;
+	value->value.asInteger = 0;
 	
 	return value;
 }
-VALUE valueMakeNumber(langSTATE st, double v){
-	VALUE value = valueCreate(st, kValueNumber);
+VALUE valueMakeNumber(langSTATE st, long v){
+	VALUE value = valueCreate(st, kValueInteger);
 	if(!value) return NULL;
-	value->value.number = v;
+	value->value.asInteger = v;
 	
 	return value;
+}
+VALUE valueMakeFloat(langSTATE st, double v){
+    VALUE value = valueCreate(st, kValueFloat);
+    if(!value) return NULL;
+    value->value.asFloat = v;
+    
+    return value;
 }
 VALUE valueMakeBool(langSTATE st, int v){
 	VALUE value = valueCreate(st, kValueBool);
@@ -253,16 +260,20 @@ void valueAssign(langSTATE st, VALUE var, VALUE value){
     
     if(value->type == kValueBool){
         var->value.boolean = value->value.boolean;
-    }else if(value->type == kValueNumber){
-        var->value.number = value->value.number;
+    }else if(value->type == kValueInteger){
+        var->value.asInteger = value->value.asInteger;
+    }else if(value->type == kValueFloat){
+        var->value.asFloat = value->value.asFloat;
     }else if(value->type == kValueString){
         if(value->value.string){
             var->value.string = strdup(value->value.string);
         }else{
             var->value.string = NULL;
         }
+    }else if(value->type == kValueObject || value->type == kValueObject ){
+        var->value.obj = value->value.obj;
     }else if(value->type == kValueNULL || value->type == kValueUndefined){
-        var->value.number = 0;
+        var->value.asInteger = 0;
     }
     
     
@@ -280,16 +291,20 @@ VALUE valueMakeVariable(langSTATE st, char *name, VALUE value){
 	
 	if(value->type == kValueBool){
 		var->value.boolean = value->value.boolean;
-	}else if(value->type == kValueNumber){
-		var->value.number = value->value.number;
+    }else if(value->type == kValueInteger){
+        var->value.asInteger = value->value.asInteger;
+    }else if(value->type == kValueFloat){
+        var->value.asFloat = value->value.asFloat;
 	}else if(value->type == kValueString){
 		if(value->value.string){
 			var->value.string = strdup(value->value.string);
 		}else{
 			var->value.string = NULL;
 		}
+    }else if(value->type == kValueObject || value->type == kValueObject ){
+        var->value.obj = value->value.obj;
 	}else if(value->type == kValueNULL || value->type == kValueUndefined){
-		var->value.number = 0;
+		var->value.asInteger = 0;
 	}
 	
 	return var;
@@ -304,9 +319,9 @@ int valueGetType(const char *typeName){
     } else if (strcmp(typeName, "bool") == 0) {
         return kValueBool;
     } else if (strcmp(typeName, "int") == 0) {
-        return kValueNumber;
+        return kValueInteger;
     } else if (strcmp(typeName, "float") == 0) {
-        return kValueNumber;
+        return kValueFloat;
     } else if (strcmp(typeName, "string") == 0) {
         return kValueString;
     } else if (strcmp(typeName, "function") == 0) {
@@ -323,7 +338,8 @@ int valueToBool(langSTATE st, VALUE value){
 	if(!value) return 0;
 	
 	if(value->type == kValueBool) return value->value.boolean;
-	if(value->type == kValueNumber) return (value->value.number > 0);
+	if(value->type == kValueInteger) return (value->value.asInteger > 0);
+    if(value->type == kValueFloat) return (value->value.asFloat > 0.0);
 	if(value->type == kValueString){
 		if(!value->value.string) return 0;
 		if(strlen(value->value.string) > 0) return 1;
@@ -333,13 +349,29 @@ int valueToBool(langSTATE st, VALUE value){
 	return 0;
 }
 double valueToDouble(langSTATE st, VALUE value){
+    if(!value) return 0;
+    
+    if(value->type == kValueBool) return (double) value->value.boolean;
+    if(value->type == kValueInteger) return (double)value->value.asInteger;
+    if(value->type == kValueFloat) return value->value.asFloat;
+    if(value->type == kValueString){
+        if(!value->value.string) return 0;
+        if(strlen(value->value.string) > 0) return atof(value->value.string);
+    }
+    if(value->type == kValueNULL) return 0;
+    if(value->type == kValueUndefined) return 0;
+    
+    return 0;
+}
+long valueToLong(langSTATE st, VALUE value){
 	if(!value) return 0;
 	
-	if(value->type == kValueBool) return (double) value->value.boolean;
-	if(value->type == kValueNumber) return value->value.number;
+	if(value->type == kValueBool) return (long) value->value.boolean;
+	if(value->type == kValueInteger) return value->value.asInteger;
+    if(value->type == kValueFloat) return (long) value->value.asFloat;
 	if(value->type == kValueString){
 		if(!value->value.string) return 0;
-		if(strlen(value->value.string) > 0) return atof(value->value.string);
+		if(strlen(value->value.string) > 0) return atol(value->value.string);
 	}
 	if(value->type == kValueNULL) return 0;
 	if(value->type == kValueUndefined) return 0;
@@ -350,11 +382,16 @@ char *valueToString(langSTATE st, VALUE value){
 	if(!value) return "";
 	
 	if(value->type == kValueBool) return (value->value.boolean) ? "1" : "0";
-	if(value->type == kValueNumber){
+	if(value->type == kValueInteger){
 		CSTRING(out, kSZ_MAX_PSTR)
-		snprintf(out,kSZ_MAX_PSTR,"%f",value->value.number);
+		snprintf(out,kSZ_MAX_PSTR,"%ld",value->value.asInteger);
 		return out;
 	}
+    if(value->type == kValueFloat){
+        CSTRING(out, kSZ_MAX_PSTR)
+        snprintf(out,kSZ_MAX_PSTR,"%f",value->value.asFloat);
+        return out;
+    }
 	if(value->type == kValueString){
 		if(!value->value.string) return 0;
 		if(strlen(value->value.string) > 0) return strdup(value->value.string);
@@ -524,6 +561,9 @@ VALUES symTabCreate(langSTATE st){
 		langRaiseRuntimeError(st, "Unable to allocate memory");
 		return NULL;
 	}
+    
+    values->isRoot = 0;
+    
 	values->length = 0;
 	values->items = malloc(sizeof(struct langSymbol *));
 	values->items[0] = NULL;
@@ -558,13 +598,31 @@ int symTabInsert(langSTATE st, VALUES symtab, VALUE value){
 		langRaiseRuntimeError(st, "Unable to allocate memory for value");
 		return 0;
 	}
-	printf("[symTabInsert][count=%i][sym=%s]\n", symtab->length, value->name);
+	//printf("[symTabInsert][count=%i][sym=%s]\n", symtab->length, value->name);
 	
 	entries[symtab->length] = value;
 	symtab->length++;
 	symtab->items = entries;
 	
 	return 1;
+}
+
+VALUE symTabSearch(langSTATE st, VALUES symtab, char *name){
+    if(!symtab){
+        return NULL;
+    }
+    
+    for(int i=0; i < symtab->length; i++){
+        VALUE v = symtab->items[i];
+        if(!v) continue;
+        if(!v->name) continue;
+        if(strcmp(v->name, name) == 0){
+            return v;
+        }
+    }
+    
+    return NULL;
+    
 }
 
 VALUE symTabLookup(langSTATE st, VALUES symtab, char *name){
@@ -581,7 +639,12 @@ VALUE symTabLookup(langSTATE st, VALUES symtab, char *name){
 		}
 	}
 	
-	return NULL;
+    if(symtab->isRoot) return NULL;
+    
+    //look in Global
+    SCOPE gScope = st->scopeStack[0];
+    return symTabLookup(st, gScope->symtab, name);
+    
 }
 
 
@@ -643,8 +706,10 @@ void debugDumpSymbol(VALUE value, char *prefix, int lvl ){
 	
 	if(value->type == kValueString){
 		printf("%s name:[%s] value:[%s]\n", tab, value->name, value->value.string);
-	}else if(value->type == kValueNumber){
-		printf("%s (number) name:[%s] value:[%f]\n", tab, value->name, value->value.number);
+	}else if(value->type == kValueInteger){
+		printf("%s (integer) name:[%s] value:[%ld]\n", tab, value->name, value->value.asInteger);
+    }else if(value->type == kValueFloat){
+        printf("%s (float) name:[%s] value:[%f]\n", tab, value->name, value->value.asFloat);
 	}else if(value->type == kValueBool){
 		printf("%s (boolean) name:[%s] value:[%d]\n", tab, value->name, value->value.boolean);
 	}else if(value->type == kValueUndefined){
@@ -717,8 +782,10 @@ void debugDumpStatements(ICTAB table, char *prefix, int lvl){
 		   if(!e->ref) continue;
 		   if(e->ref->type == kValueString){
 			   printf("%s%s[%d] LITERAL-STRING (%d) value:[%s]\n", tab, prefix, i, e->type, e->ref->value.string);
-		   }else if(e->ref->type == kValueNumber){
-			   printf("%s%s[%d] LITERAL-NUMBER (%d) value:[%f]\n", tab, prefix, i, e->type, e->ref->value.number);
+		   }else if(e->ref->type == kValueInteger){
+			   printf("%s%s[%d] LITERAL-INTEGER (%d) value:[%ld]\n", tab, prefix, i, e->type, e->ref->value.asInteger);
+           }else if(e->ref->type == kValueFloat){
+               printf("%s%s[%d] LITERAL-FLOAT (%d) value:[%f]\n", tab, prefix, i, e->type, e->ref->value.asFloat);
 		   }else if(e->ref->type == kValueBool){
 			   printf("%s%s[%d] LITERAL-BOOLEAN (%d) value:[%d]\n", tab, prefix, i, e->type, e->ref->value.boolean);
 		   }else if(e->ref->type == kValueUndefined){
@@ -741,6 +808,17 @@ void debugDumpStatements(ICTAB table, char *prefix, int lvl){
 	   }else if(e->type == kST_BLOCK){
 		   printf("%s%s[%d] STMT-BLOCK (%d) (argc:%d)\n", tab, prefix, i, e->type, e->args->length);
 		   debugDumpStatements(e->args, "stmnt", lvl+1);
+       }else if(e->type == kST_FUNCTION){
+           OBJECT fnObj = e->ref->value.obj;
+           printf("%s%s[%d] FUNCTION %s()  (%d) (argc:%d)\n", tab, prefix, i, fnObj->name, e->type, fnObj->paramCount);
+           for(int pidx=0; pidx < fnObj->paramCount; pidx++){
+               fnParameter param = fnObj->params[pidx];
+               printf("%s\tparam[%d] %s\n", tab, pidx, param.name);
+               if(param.initValue){
+                   debugDumpStatements(param.initValue->args, "init", lvl+2);
+               }
+           }
+           debugDumpStatements(fnObj->fnBlock->args, "stmnt", lvl+1);
 		   
 	   }else if(e->type == kST_OP){
 		   char op = (e->code <= 127) ? (char) e->code : 32;

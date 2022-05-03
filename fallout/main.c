@@ -118,8 +118,8 @@ int main(int argc, const char * argv[]) {
 	
     setlocale(LC_ALL, "en_US.utf8");
     
-    testUTF8();
-    exit(1);
+    
+    //exit(1);
     
 	char *env = getenv("PATH_TRANSLATED1");
 	if (!env) {
@@ -153,8 +153,16 @@ int main(int argc, const char * argv[]) {
 	st->onRuntimeError = onRuntimeError;
 	st->onSyntaxError = onParserError;
 	
+    runScriptWithPath(st, script_file);
+    
+    //runtimeInitState(st);
+    //VALUE vRef = symTabLookup(st, st->scope->symtab, "object");
+    
+
+
+
+
 	
-	runScriptWithPath(st, script_file);
 	
 	//testRegEx();
 }

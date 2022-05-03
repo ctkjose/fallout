@@ -1,16 +1,16 @@
-var k1=10,v1 = 25.5 * 2, name="Joe";
+var name="Joe 😂";
+
+object.print(object.version, name);
 
 
-if(k1 >= 20){
-	object.print("B");
-} else {
-	object.print("C");
+
+function doThis(v="", code = 5){
+    var i = code + 1.5;
+    i = 12.5 + i;
+    object.print("Inside my function");
+    object.print(v);
+    object.print(i);
 }
 
-v1 = 0;
-
-while(v1 < 5){
-    v1 = v1 + 1;
-    object.print("here");
-}
-
+doThis(name);
+doThis(name);
