@@ -646,6 +646,15 @@ VALUE symTabSearch(langSTATE st, VALUES symtab, char *name){
     return NULL;
     
 }
+VALUE symTabGlobalSearch(langSTATE st, char *name){
+    
+    
+    //look in Global
+    SCOPE gScope = st->scopeStack[0];
+    return symTabSearch(st, gScope->symtab, name);
+    
+    
+}
 
 VALUE symTabLookup(langSTATE st, VALUES symtab, char *name){
 	if(!symtab){
@@ -661,12 +670,15 @@ VALUE symTabLookup(langSTATE st, VALUES symtab, char *name){
 		}
 	}
 	
+    
     if(symtab->isRoot) return NULL;
     
     //look in Global
     SCOPE gScope = st->scopeStack[0];
     return symTabLookup(st, gScope->symtab, name);
     
+    
+    return NULL;
 }
 
 

@@ -1343,8 +1343,14 @@ VALUE parseFuncDeclaration(langPARSER parser){
         return NULL;
     }
     
-    VALUE var = valueMakeVariable(parser->st, "version", valueMakeString(parser->st, "FN01"));
-    symTabInsert(parser->st, fnObj->symtab, var);
+    VALUE vProtoObj = symTabGlobalSearch(parser->st, "object");
+    fnObj->proto = vProtoObj;
+    
+    VALUE var1 = valueMakeVariable(parser->st, "__function_name", valueMakeString(parser->st, name ));
+    symTabInsert(parser->st, fnObj->symtab, var1);
+    
+    VALUE var2 = valueMakeVariable(parser->st, "__proto", vProtoObj);
+    symTabInsert(parser->st, fnObj->symtab, var2);
     
     return vObj;
 }

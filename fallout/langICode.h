@@ -64,6 +64,7 @@ VALUE valueFromStatement(langSTATE st, ICODE e);
 VALUES symTabCreate(langSTATE st);
 void symTabFree(VALUES values);
 int symTabInsert(langSTATE st, VALUES symtab, VALUE value);
+VALUE symTabGlobalSearch(langSTATE st, char *name);
 VALUE symTabLookup(langSTATE st, VALUES symtab, char *name);
 VALUE symTabSearch(langSTATE st, VALUES symtab, char *name);
 

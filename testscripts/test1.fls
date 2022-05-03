@@ -5,7 +5,9 @@ object.print(object.version, name);
 
 
 function doThis(v="", code = 5){
-    object.print(self.version);
+    object.print("Function Name: ", self.__function_name);
+    
+    self.print(self.version);
 }
 
 doThis(name);

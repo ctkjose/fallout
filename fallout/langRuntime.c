@@ -464,7 +464,7 @@ void runtimeInitState(langSTATE st){
 
 void runtimeExecuteState(langSTATE st){
 	if(!st) return;
-	runtimeInitState(st);
+	
 	
 	VALUE returnValue = runtimeExecuteStack(st, st->root);
 	
@@ -481,6 +481,7 @@ void runtimeExecuteSource(langSTATE st, const char *source){
 		return;
 	}
 	
+    runtimeInitState(st);
 
 	parser->st = st;
 	
@@ -490,7 +491,6 @@ void runtimeExecuteSource(langSTATE st, const char *source){
     printf("=====================================\n");
     
     runtimeExecuteState(st);
-	
 	
 	
 	return;
@@ -511,6 +511,8 @@ VALUE runtimeExecuteFunction(langSTATE st, OBJECT fnObj, ICTAB table){
         runtimeRaiseError(st, "RUNTIME ERROR: Unable to execute function. [FNCALL-501]");
         return UndefinedValue;
     }
+    
+    fnScope->obj = fnObj;
     
     int pIdx=0;
     int argc = table->length - 1;
@@ -764,12 +766,25 @@ VALUE statementGetRef(langSTATE st, ICTAB table, VALUE parent){
 	
 	VALUE vRef = symTabLookup(st, symtab, s);
     if(!vRef){
-        if(parent) return UndefinedValue;
-        
-    	//snprintf(msg, 255, "Value '%s' is undefined.", s);
+        if(parent && parent->type == kValueObject && obj && obj->proto){
+            OBJECT objProto = obj->proto->value.obj;
+            if(!objProto) return UndefinedValue;
+            if(!objProto->symtab) return UndefinedValue;
+            vRef = symTabLookup(st, objProto->symtab, s);
+            
+            if(!vRef){
+                printf("[WARN] Value '%s' is undefined.\n", s);
+                return UndefinedValue;
+            }
+            
+            //strcmp(parent->name,"self")
+        }else{
+            printf("[WARN] Value '%s' is undefined.\n", s);
+            return UndefinedValue;
+        }
+    	
+        //snprintf(msg, 255, "Value '%s' is undefined.", s);
 		//runtimeRaiseError(st, msg);
-		
-		return UndefinedValue;
 	}
 	
 	/*
@@ -863,9 +878,8 @@ void statementFunctionInit(langSTATE st, ICODE ic){
     printf("statementFunctionInit(%s)\n", fnObj->name);
     
     if(!fnObj->isClosure){
-        if(!fnObj->selfValue) return;
         
         //fnObj->selfValue->refCount++;
-        symTabInsert(st, st->scope->symtab, fnObj->selfValue);
+        symTabInsert(st, st->scope->symtab, ic->ref);
     }
 }
