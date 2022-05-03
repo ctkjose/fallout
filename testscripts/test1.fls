@@ -5,12 +5,14 @@ object.print(object.version, name);
 
 
 function doThis(v="", code = 5){
-    var i = code + 1.5;
-    i = 12.5 + i;
-    object.print("Inside my function");
-    object.print(v);
-    object.print(i);
+    object.print(self.version);
 }
 
 doThis(name);
-doThis(name);
+
+
+var fn = function(){
+    object.print("Hello Jose");
+};
+
+fn();

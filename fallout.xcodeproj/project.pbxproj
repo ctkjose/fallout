@@ -64,6 +64,7 @@
 		48689AAB26D4172C0066215D /* langFramework.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = langFramework.c; sourceTree = "<group>"; };
 		48689AB126D52BF40066215D /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		48689AB226D52C0D0066215D /* CFunctions.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CFunctions.md; sourceTree = "<group>"; };
+		48D348602820C74F00F68B40 /* doc_functions.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = doc_functions.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -164,6 +165,7 @@
 				48689AB126D52BF40066215D /* README.md */,
 				48689AB226D52C0D0066215D /* CFunctions.md */,
 				48245CF5281E4E900071C474 /* DOC_CONTROL.md */,
+				48D348602820C74F00F68B40 /* doc_functions.md */,
 			);
 			path = Docs;
 			sourceTree = "<group>";

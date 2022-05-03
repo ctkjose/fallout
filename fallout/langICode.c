@@ -197,6 +197,9 @@ VALUE valueCreate(langSTATE st, int type){
 
 void valueFree(VALUE value){
 	
+    if(value->refCount > 0){
+        return;
+    }
 	if(value->name){
 		free(value->name);
 	}
@@ -423,7 +426,7 @@ OBJECT objectCreate(langSTATE st, int type, char *name, OBJECT *prototype){
 	
 	obj->args = NULL;
 	obj->args = NULL;
-	obj->thisValue = NULL;
+	
 	obj->proto = NULL;
 	
 	obj->data = NULL;
@@ -432,7 +435,19 @@ OBJECT objectCreate(langSTATE st, int type, char *name, OBJECT *prototype){
 	obj->args = symTabCreate(st);
 	obj->statements = icodeTableCreate();
 
-	
+    
+    obj->selfValue = valueCreate(st, kValueObject);
+    if(obj->selfValue){
+        obj->selfValue->name = strdup("self");
+        obj->selfValue->value.obj = obj;
+        obj->selfValue->refCount++;
+        
+        symTabInsert(st, obj->symtab, obj->selfValue);
+    }else{
+        //TODO Handle error
+    }
+    
+    
 	if(name){
 		strncpy(obj->name, name, kSZ_MAX_FN_NAME);
 	}else{
@@ -458,19 +473,23 @@ void objectFree(OBJECT obj){
 	
 	symTabFree(obj->symtab);
 	
-	if(obj->thisValue){
-		obj->thisValue->refCount--;
-		obj->thisValue = NULL;
+	if(obj->selfValue){
+		obj->selfValue->refCount--;
+		obj->selfValue = NULL;
 	}
 	
 	free(obj);
 }
 
-void objectSetThis(OBJECT obj, VALUE var){
+void objectSetSelf(OBJECT obj, VALUE var){
 	if(!obj || !var) return;
 	
-	obj->thisValue = var;
-	var->refCount++;
+    if(obj->selfValue && var->value.obj ){
+        obj->selfValue->value.obj = var->value.obj;
+        var->refCount++;
+    }
+	
+	
 }
 VALUE valueMakeObject(langSTATE st, int type, char *name){
 
@@ -592,6 +611,9 @@ int symTabInsert(langSTATE st, VALUES symtab, VALUE value){
 	
 	VALUE *entries;
 	
+    if(strlen(value->name) <= 0){
+        printf("debug...");
+    }
 	
 	entries = realloc(symtab->items, (symtab->length+1) * sizeof(VALUE));
 	if(!entries){

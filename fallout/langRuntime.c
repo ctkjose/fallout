@@ -35,6 +35,7 @@ SCOPE runtimeScopeCreate(langSTATE st, SCOPE parent){
     scope->paramCount = 0;
     scope->params = NULL;
     
+    scope->obj = NULL;
 	
 	if(parent){
 		scope->parent = parent;
@@ -571,6 +572,13 @@ VALUE runtimeExecuteFunction(langSTATE st, OBJECT fnObj, ICTAB table){
         }
     }
     
+    
+    if(fnObj->selfValue){
+        fnObj->selfValue->refCount++;
+        symTabInsert(st, fnScope->symtab, fnObj->selfValue);
+    }
+
+    
     fnScope->returnValue = UndefinedValue;
     
     //Mirror params
@@ -596,6 +604,19 @@ VALUE runtimeExecuteFunction(langSTATE st, OBJECT fnObj, ICTAB table){
             runtimeRaiseError(st, "RUNTIME ERROR: Unable to execute function. [FNCALL-500]");
         }
     }
+    
+    if(fnObj->selfValue){
+        fnObj->selfValue->refCount--;
+    }
+    
+    //TODO free fnScope
+    symTabFree(fnScope->symtab);
+    fnScope->obj = NULL;
+    fnScope->params = NULL;
+    fnScope->parent = NULL;
+    
+    free(fnScope);
+    
     
     //free(fnScope->params);
     //fnScope->paramCount=0;
@@ -725,7 +746,7 @@ VALUE statementGetRef(langSTATE st, ICTAB table, VALUE parent){
 	if(parent){
 		if(parent->type == kValueObject){
 			obj = parent->value.obj;
-			if(obj->type == kObjTypeObject){
+			if(obj->symtab){
 				symtab = obj->symtab;
 			}
 		}
@@ -742,8 +763,10 @@ VALUE statementGetRef(langSTATE st, ICTAB table, VALUE parent){
 	
 	
 	VALUE vRef = symTabLookup(st, symtab, s);
-	if(!vRef){
-		//snprintf(msg, 255, "Value '%s' is undefined.", s);
+    if(!vRef){
+        if(parent) return UndefinedValue;
+        
+    	//snprintf(msg, 255, "Value '%s' is undefined.", s);
 		//runtimeRaiseError(st, msg);
 		
 		return UndefinedValue;
@@ -840,11 +863,9 @@ void statementFunctionInit(langSTATE st, ICODE ic){
     printf("statementFunctionInit(%s)\n", fnObj->name);
     
     if(!fnObj->isClosure){
-        if(!strlen(fnObj->name)){
-            runtimeRaiseError(st, "Expecting name for function.");
-            return;
-        }
-        VALUE var = valueMakeVariable(st, fnObj->name, ic->ref);
-        symTabInsert(st, st->scope->symtab, var);
+        if(!fnObj->selfValue) return;
+        
+        //fnObj->selfValue->refCount++;
+        symTabInsert(st, st->scope->symtab, fnObj->selfValue);
     }
 }

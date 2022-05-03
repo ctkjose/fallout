@@ -70,7 +70,7 @@ VALUE symTabSearch(langSTATE st, VALUES symtab, char *name);
 #pragma mark OBJECTS
 OBJECT objectCreate(langSTATE st, int type, char *name, OBJECT *prototype);
 void objectFree(OBJECT obj);
-void objectSetThis(OBJECT obj, VALUE var);
+void objectSetSelf(OBJECT obj, VALUE var);
 void objectAddProperty(langSTATE st, OBJECT obj, VALUE value);
 
 #pragma mark FUNCTIONS

@@ -856,6 +856,7 @@ int parseExpressionFactor(langPARSER parser, ICTAB table){
 		icodeTablePush(table, e);
 		return 1;
 	}else if(node->type == kTK_IDENTIFIER){
+        
 		tokenRestore(parser, node);
 		ICODE e = parseICodeLeftHand(parser);
 		if(e){
@@ -907,7 +908,7 @@ int parseDeclarationVariable(langPARSER parser, ICTAB table){
 	
 	if(!node || (node->type != kTK_IDENTIFIER) ){
 		if(node) tokenRestore(parser, node);
-		parserRaiseSyntaxError(parser, "expecting identifier in variable declaration");
+		parserRaiseSyntaxError(parser, "Expecting identifier in variable declaration");
 		return 0;
 	}
 	
@@ -1200,7 +1201,7 @@ int parseWhileStatement(langPARSER parser, ICTAB table){
     icodeTablePush(table, stmt);
     return 1;
 }
-void parseFormalParameter(langPARSER parser, ICTAB table, OBJECT fnObj){
+void parseFormalParameter(langPARSER parser, OBJECT fnObj){
     
     int argc = 0;
      
@@ -1208,6 +1209,11 @@ void parseFormalParameter(langPARSER parser, ICTAB table, OBJECT fnObj){
     node = tokenNext(parser);
     
     debugDumpToken(node, "PARAMTOKEN");
+    
+    if(node && node->type == kTK_OPERATOR && node->operator == opType_RP){
+        tokenRestore(parser, node);
+        return;
+    }
     
     if(!node || (node->type != kTK_IDENTIFIER) ){
         if(node) tokenRestore(parser, node);
@@ -1256,7 +1262,7 @@ void parseFormalParameter(langPARSER parser, ICTAB table, OBJECT fnObj){
     
     if(node->operator == opType_Comma){
         tokenFree(node);
-        parseFormalParameter(parser, table, fnObj);
+        parseFormalParameter(parser, fnObj);
     }else if(node->operator == opType_RP){
         tokenRestore(parser, node);
     }else{
@@ -1267,22 +1273,17 @@ void parseFormalParameter(langPARSER parser, ICTAB table, OBJECT fnObj){
     
     return;
 }
-int parseFuncStatement(langPARSER parser, ICTAB table){
+
+/// Returns a `VALUE` representing a function declaraded in current scope
+VALUE parseFuncDeclaration(langPARSER parser){
     //FUNCTION NAME (ARGS...){}
     //FUNCTION (ARGS...){}
-    
-    
-    ICTAB icParams = icodeTableCreate();
-    
-    ICODE fnDeclare = icodeAllocate(parser, kST_FUNCTION);
-    fnDeclare->args = icodeTableCreate();
     
 
     struct langNode * node;
     node = tokenNext(parser);
     if(!node){
-        icodeFree(fnDeclare);
-        return 0;
+        return NULL;
     }
     
     CString name;
@@ -1293,9 +1294,8 @@ int parseFuncStatement(langPARSER parser, ICTAB table){
         
         node = tokenNext(parser);
         if(!node){
-            icodeFree(fnDeclare);
             parserRaiseSyntaxError(parser, "expecting formal parameters in function declaration");
-            return 0;
+            return NULL;
         }
         
     }else{
@@ -1305,49 +1305,68 @@ int parseFuncStatement(langPARSER parser, ICTAB table){
     
     VALUE vObj = valueMakeObject(parser->st, kObjTypeFunc, name);
     if(!vObj){
-        icodeFree(fnDeclare);
         parserRaiseError(parser, "Unable to create function definition.");
-        return 0;
+        return NULL;
     }
     
     
-    fnDeclare->ref = vObj;
     OBJECT fnObj = vObj->value.obj;
     
     strncpy(fnObj->name, name, kSZ_MAX_FN_NAME);
+    
     
     fnObj->isClosure = isClosure;
     fnObj->paramCount = 0;
     
     if( (node->type != kTK_OPERATOR) || (node->operator != opType_LP)){
         tokenRestore(parser, node);
-        icodeFree(fnDeclare);
-        parserRaiseSyntaxError(parser, "expecting formal parameters in function declaration");
-        return 0;
+        parserRaiseSyntaxError(parser, "Expecting formal parameters in function declaration");
+        return NULL;
     }
     
-    parseFormalParameter(parser, icParams, fnObj);
+    parseFormalParameter(parser, fnObj);
     if(!tokenExpectOperator(parser, opType_RP)){
-        parserRaiseSyntaxError(parser, "Expecting `(` in WHILE statement");
-        return 0;
+        parserRaiseSyntaxError(parser, "Expecting  closing `)` in function's formal parameters");
+        return NULL;
     }
     
     
     if(!tokenExpectOperator(parser, opType_LKey)){
-        icodeFree(fnDeclare);
-        parserRaiseSyntaxError(parser, "expecting function block");
-        return 0;
+        parserRaiseSyntaxError(parser, "Expecting function block");
+        return NULL;
     }
     
     fnObj->fnBlock = parserICodeBlock(parser);
     
     if(!fnObj->fnBlock){
-        icodeFree(fnDeclare);
-        parserRaiseSyntaxError(parser, "expecting function block");
+        parserRaiseSyntaxError(parser, "Expecting function block");
+        return NULL;
+    }
+    
+    VALUE var = valueMakeVariable(parser->st, "version", valueMakeString(parser->st, "FN01"));
+    symTabInsert(parser->st, fnObj->symtab, var);
+    
+    return vObj;
+}
+
+int parseFuncStatement(langPARSER parser, ICTAB table){
+    //FUNCTION NAME (ARGS...){}
+    //FUNCTION (ARGS...){}
+    
+    
+     
+    ICODE fnDeclare = icodeAllocate(parser, kST_FUNCTION);
+    fnDeclare->args = icodeTableCreate();
+    
+
+    VALUE vObj = parseFuncDeclaration(parser);
+    if(!vObj){
         return 0;
     }
     
-    
+    //OBJECT fnObj = vObj->value.obj;  //NOTUSED
+    fnDeclare->ref = vObj;
+        
     //debugDumpStatements(fnObj->fnBlock->args, "FNBLOCK", 1);
     icodeTablePush(table, fnDeclare);
     
@@ -1498,15 +1517,32 @@ ICODE parseICodeFNCall(langPARSER parser, ICODE icFNREF, int opConsumeLP){
 }
 ICODE parseICodeLeftHand(langPARSER parser){
 	
+    langNODE node = tokenNext(parser);
+    if(!node){
+        parserRaiseSyntaxError(parser,"expecting an identifier");
+        return NULL;
+    }
+    
+    if( tokenIsKeyword(node) ){
+        if( strcmp(node->text, "function") == 0 ){
+            VALUE vObj = parseFuncDeclaration(parser);
+            
+            ICODE icMember = icodeAllocate(parser, kST_LITERAL);
+            icMember->ref = vObj;
+            return icMember;
+        }
+        
+        tokenRestore(parser, node);
+        parserRaiseSyntaxError(parser,"expecting an identifier");
+        return NULL;
+        
+    }
+    
 	
 	ICODE icLREF = icodeAllocate(parser, kST_GETREF);
 	icLREF->args = icodeTableCreate();
 	
-	langNODE node = tokenNext(parser);
-	if(!node){
-		parserRaiseSyntaxError(parser,"expecting an identifier");
-		return NULL;
-	}
+	
 	
 	if(node->type == kTK_OPERATOR){
 		debugDumpToken(node, "LEFTHAND_OP");
@@ -1581,7 +1617,7 @@ ICODE parseICodeLeftHand(langPARSER parser){
 		tokenRestore(parser,node);
 	}
 
-	debugDumpStatements(icLREF->args, "LEFTHAND", 2);
+	//debugDumpStatements(icLREF->args, "LEFTHAND", 2);
 	return icLREF;
 }
 int parseIdentifier(langPARSER parser,  ICTAB table, char *name, ICODE parent){

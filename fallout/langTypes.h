@@ -163,14 +163,14 @@ struct langScope {
 	int srcLine;
 	int paramCount;
     fnParameter *params;
+    
+    OBJECT obj;
 };
 
 struct langSymbols {
 	int length;
     int isRoot;
 	VALUE *items;
-    VALUES outerVars;
-    
 };
 
 struct langSymbol {
@@ -227,11 +227,11 @@ struct langOBJECT {
 	int flags;
 
 	VALUES symtab;
-	VALUE thisValue;
+	VALUE selfValue;
 	VALUE proto;
 	
 	//Function like Objects
-    VALUES outerVars;
+    VALUES closure;
 	ICTAB statements;
 	VALUES args;
     
